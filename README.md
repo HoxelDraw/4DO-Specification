@@ -18,7 +18,7 @@ I propose a new 4D geometry file format that is designed specifically for 4D com
 - Describe only geometry, not a full scene
 - Minimize data duplication
 
-This format might not be the most efficient, nor the most flexible (like .glTF). It does not cover all possible use-cases of 4D geometric computation. This format is intended to be simple to read and write, both by humans and computers. Its features are unapologetically skewed toward those needed for 4D Computer Graphics applications.
+This format might not be the most efficient, nor the most flexible. It does not cover all possible use-cases of 4D geometric computation. This format is intended to be simple to read and write, both by humans and computers. Its features are unapologetically skewed toward those needed for 4D Animation and 4D Game applications.
 
 ### Core Features
 - Vertices
@@ -30,7 +30,7 @@ This format might not be the most efficient, nor the most flexible (like .glTF).
 - Tetrahedral cells
 - Compound cells (contiguous groups of tetrahedral cells)
 - Multiple named objects
-- Model handedness
+- Model Orientation
 
 ### Format Design Inspiration: Wavefront OBJ
 The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file format for 3D geometry. The OBJ format is popular for its human readability, simplicity, and its ability to reuse vertex data for multiple faces. The 4DO format will feel very similar to the OBJ format with a few key differences:
@@ -39,7 +39,7 @@ The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file forma
 2. It supports only tetrahedral cells (3-simplex) whereas OBJ supports n-sided convex and concave polygons
 3. The indices are Zero-based, as opposed to OBJ which is One-based
 4. Relative indices are NOT supported in 4DO (no negative indices)
-5. 4DO provides a mechanism for defining the coordinate frame of the model (model handedness)
+5. 4DO provides a mechanism for defining the coordinate frame of the model
 6. Indices are relative to the current object, rather than global
 7. It supports vertex colors in addition to texture coordinates
 
@@ -58,7 +58,7 @@ The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file forma
 
 ## File Structure
 
-A 4DO file **SHOULD** begin with "4DO" followed by a space and then the file specification version, which is currently "1".
+A 4DO file **SHOULD** begin with "4DO" followed by a space and then the file specification version, which is currently "1", like this: `4DO 1`.
 
 A 4DO file is made up of keywords and data.
 
@@ -84,21 +84,30 @@ Indices **MUST** be non-negative real integers and **MUST NOT** refer to out-of-
 
 Keywords are case-insensitive.
 
-4DO files **MUST** use Unicode characters and **MUST** be encoded using UTF-8.
+4DO parsers **SHOULD** support Unicode characters and **SHOULD** expect .4DO files to be encoded using UTF-8.
+
+## Invalid 4DO Files
+
+If a file is deemed **INVALID**, it **MAY** be rejected outright. However, a parser **MAY** attempt to fix the contents of the file, but it's under no obligation to do so. Optionally, it may disregard the broken/inconsistent data and attempt to properly load the rest of the data. If this is done, a parser **SHOULD** inform the user of the problem and of which data wasn't loaded.
 
 ## Geometric Structure
 There are several ways to define 4D geometric entities. Vertices and vertex data are the foundation of this file format. All other structures build upon collections of vertex data (or collections of collections of vertex data).
 
-Cell => Tetrahedron => Vertex
+### Vertex => Tetrahedron
+A tetrahedral mesh will likely be the most common usage for 4D graphics.
+![Tetrahedra made from vertices](4DO_spec_diagrams/verts_to_tets.png)
 
-Tetrahedron => Vertex
+### Vertex => Tetrahedron => Cell
+For more advanced rendering or modeling systems, an application may require the use of higher-order cells, rather than just tetrahedra. While 4DO doesn't directly support arbitrary cell configurations, it can effectively support them by the use of the Cell structure, which is a grouping of tetrahedra into a higher-order polyhedron.
+![Cells composed of tetrahedra](4DO_spec_diagrams/verts_to_tets_to_cells.png)
 
-Path => Vertex
+### Vertex => Polyline
+Some 4D applications developers may want to render some edges of the geometry, but not all of them. Polylines should be used for this.
+![Polylines connecting arbitrary vertices](4DO_spec_diagrams/verts_to_polyline.png)
 
-Vertex
-
-[TODO: it'd be nice to have a diagram to really drive this point home]
-[TODO: also maybe provide use-cases for each of these four structures. Point clouds, tet meshes, cell meshes, wireframe meshes]
+### Vertex
+Using only vertex data, 4DO can encode 4D point cloud data. This may also have utility with applications that use 3D+time.
+![4D point cloud](4DO_spec_diagrams/vertices.png)
 
 ## Comments
 
@@ -112,7 +121,7 @@ Comments **MUST** be on their own lines. Comments **MUST NOT** share a line with
 ```
 
 
-## Model Orientation (Handedness)
+## Model Orientation
 
 An Orientation is **OPTIONAL**. If one is not provided, the orientation is assumed to be X-right, Y-up, Z-forward, W-over/away.
 
@@ -177,7 +186,7 @@ vt -0.2 1.6 0.9
 
 Color Data is **OPTIONAL**.
 
-Color Data can be assigned to Vertices, Tetrahedra, Paths, and Cells in the same way that custom Data can be assigned to them.
+Color Data can be assigned to Vertices, Tetrahedra, Polylines, and Cells in the same way that custom Data can be assigned to them.
 
 A Color is denoted using the `co` keyword, followed by 3 unsigned integer numbers. These numbers **MUST** be in the [0,255] range. The 3 values represent the red, green, and blue components of the color.
 
@@ -243,15 +252,15 @@ t 4/8/0 5/9/1 6/10/2 7/11/3
 
 # Two tetrahedra in the same object with their vertex position data listed just before the tetrahedron commands
 # (the tformat command is not necessary in this case since only vertex position data is provided)
-v 0 0 0 0
-v 1 0 0 0
-v 0 1 0 0
-v 0 0 1 0
+v 0.0 0.0 0.0 0.0
+v 1.0 0.0 0.0 0.0
+v 0.0 1.0 0.0 0.0
+v 0.0 0.0 1.0 0.0
 t 0 1 2 3
-v 2 2 2 2
-v 4 2 2 2
-v 2 4 2 2
-v 2 2 4 2
+v 2.0 2.0 2.0 2.0
+v 4.0 2.0 2.0 2.0
+v 2.0 4.0 2.0 2.0
+v 2.0 2.0 4.0 2.0
 t 4 5 6 7
 
 # A tetrahedron with a single color (at index 9), rather than a color for each vertex
@@ -304,7 +313,7 @@ Cells are **OPTIONAL**.
 
 A cell is denoted by the `c` keyword, followed by a list of 1 or more tetrahedron indices, separated by spaces.
 
-Like Paths, there is no artificial limit to the number of tetrahedra assigned to a cell.
+Like Polylines, there is no artificial limit to the number of tetrahedra assigned to a cell.
 
 The tetrahedra in cells **SHOULD** be contiguous.
 
@@ -321,7 +330,7 @@ c 0 2 3
 
 # A cell with cell-level color data (index 9), and the tetrahedra at indices 0, 5, and 6
 cformat co t
-C 9 0 5 6
+c 9 0 5 6
 ```
 
 ## Objects
@@ -341,28 +350,28 @@ Objects **MUST** be contiguous (i.e. you cannot start object1, then define objec
 ```
 # Object names can include spaces and numbers: "object 1"
 o object 1
-v 2 2 3 3
-v 3 3 4 4
-v 4 4 5 5
-v 5 5 6 6
+v 2.0 2.0 3.0 3.0
+v 3.0 3.0 4.0 4.0
+v 4.0 4.0 5.0 5.0
+v 5.0 5.0 6.0 6.0
 t 0 1 2 3
 
 
 # A new object definition resets the vertex data and tetrahedron data indices
 o object_2
-v 7 7 8 8
-v 8 8 9 9
-v 9 9 10 10
-v 10 10 11 11
+v 7.0 7.0 8.0 8.0
+v 8.0 8.0 9.0 9.0
+v 9.0 9.0 10.0 10.0
+v 10.0 10.0 11.0 11.0
 
-# vertex 0 here refers to the one at (7,7,8,8), NOT the one at (2,2,3,3)
+# vertex 0 here refers to the one at (7.0,7.0,8.0,8.0), NOT the one at (2.0,2.0,3.0,3.0)
 t 0 1 2 3
 
 # You cannot restart "object 1" after "object_2" has been declared
-# o object 1  <= **INVALID**
+# o object 1  <= INVALID
 
 # You cannot name a new object "Object_2". Object names are case-insensitive
-# o Object_2  <= **INVALID**
+# o Object_2  <= INVALID
 ```
 
 # Material Library
@@ -371,6 +380,8 @@ t 0 1 2 3
 [BIG TODO]
 
 [TODO: similar to how OBJ reads materials, but all the material model will probably be based on the glTF PBR model]
+[see [https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness](https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness)]
+[see also [https://github.com/KhronosGroup/glTF?tab=readme-ov-file](https://github.com/KhronosGroup/glTF?tab=readme-ov-file)]
 
 ## Using Materials
 To import a material library, use the `mtllib` keyword, followed by the name of an external .pbr file.
@@ -394,6 +405,4 @@ Object with two materials
 New object: no material until usemtl is called again
 ```
 
-# Invalid 4DO Files
 
-If a file is deemed **INVALID**, it **MAY** be rejected outright. However, a parser **MAY** attempt to fix the contents of the file, but it's under no obligation to do so. Optionally, it may disregard the broken/inconsistent data and attempt to properly load the rest of the data. If this is done, a parser **SHOULD** inform the user of the problem and of which data wasn't loaded.
