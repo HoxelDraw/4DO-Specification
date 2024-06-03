@@ -29,7 +29,6 @@ This format might not be the most efficient, nor the most flexible. It does not 
 - Polylines
 - Tetrahedral cells
 - Compound cells (contiguous groups of tetrahedral cells)
-- Multiple named objects
 - Model Orientation
 
 ### Format Design Inspiration: Wavefront OBJ
@@ -40,8 +39,8 @@ The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file forma
 3. The indices are Zero-based, as opposed to OBJ which is One-based
 4. Relative indices are NOT supported in 4DO (no negative indices)
 5. 4DO provides a mechanism for defining the coordinate frame of the model
-6. Indices are relative to the current object, rather than global
-7. It supports vertex colors in addition to texture coordinates
+6. It supports vertex colors in addition to texture coordinates
+7. 4DO doesn't support multiple objects
 
 ## About this document
 **OPTIONAL**, **REQUIRED**, **MAY**, **MAY NOT**, **SHOULD**, **SHOULD NOT**, **MUST**, **MUST NOT**
@@ -58,32 +57,36 @@ The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file forma
 
 ## File Structure
 
+### File Header
 A 4DO file **SHOULD** begin with "4DO" followed by a space and then the file specification version, which is currently "1", like this: `4DO 1`.
 
-A 4DO file is made up of keywords and data.
+If an Orientation is provided, it **SHOULD** be provided in the header lines and it **MUST** be provided before any Vertex data is listed.
 
-Each line of the file contains a separate command, which starts with a keyword and is followed by data.
+### Commands
 
-Each command is on its own line.
-
-Each command starts with the keyword.
-
-Blank lines are ignored.
+A 4DO file is made up of Commands. A Command resides on a single line and is composed of one keyword followed by relevant data.
 
 Commands are processed sequentially. A Command **MUST NOT** reference data that is further down the file.
 
+Keywords are case-insensitive.
+
+Blank lines are ignored.
+
+### Floating Point Numbers
 Floating point numbers can have arbitrary precision. Use the period instead of the comma to denote fractional values. Floating point numbers **MUST** be real numbers. Negative numbers **MUST** use the `-` sign. Positive numbers **MAY** use the `+` sign but any number without a sign is assumed to be positive.
 
 Floating point numbers **MAY** be written as integers, without a decimal point (e.g. `1`)
 
 Floating point numbers **MAY** be expressed in scientific notation.
 
+`+/-Infinity` and `NaN` are not valid floating point numbers.
+
+### Indices
 Indices are zero-based (as opposed to Wavefront OBJ where indices are 1-based)
 
-Indices **MUST** be non-negative real integers and **MUST NOT** refer to out-of-bounds data positions (i.e. if there are 10 vertices defined, a Tetrahedron **MUST NOT** attempt to refer to a vertex at index 10 (remember that indices are zero-based))
+Indices **MUST** be non-negative real integers and **MUST NOT** refer to out-of-bounds data positions (i.e. if there are 10 vertices defined, a Tetrahedron **MUST NOT** attempt to refer to a vertex at index 10 (which would be the 11th vertex))
 
-Keywords are case-insensitive.
-
+### General
 4DO parsers **SHOULD** support Unicode characters and **SHOULD** expect .4DO files to be encoded using UTF-8.
 
 ## Invalid 4DO Files
@@ -94,7 +97,7 @@ If a file is deemed **INVALID**, it **MAY** be rejected outright. However, a par
 There are several ways to define 4D geometric entities. Vertices and vertex data are the foundation of this file format. All other structures build upon collections of vertex data (or collections of collections of vertex data).
 
 ### Vertex => Tetrahedron
-A tetrahedral mesh will likely be the most common usage for 4D graphics.
+Tetrahedra are the main building blocks of 4DO. A tetrahedral mesh will likely be the most common usage for 4D graphics.
 ![Tetrahedra made from vertices](4DO_spec_diagrams/verts_to_tets.png)
 
 ### Vertex => Tetrahedron => Cell
@@ -113,11 +116,13 @@ Using only vertex data, 4DO can encode 4D point cloud data. This may also have u
 
 Comments are denoted with the `#` symbol. Any text after a `#` **MUST** be ignored until a newline is encountered. Comments **MUST NOT** affect the geometric content of the file.
 
-Comments **MUST** be on their own lines. Comments **MUST NOT** share a line with any other command, even if the comment comes after the command (i.e. you can't do `v 0 0 0 0  #invalid comment`).
+Comments **MAY** be placed on the same line as a Command, only **after** the full command is listed.
 
-#### Example
+#### Examples
 ```
 # This is a comment
+
+v 1.0 2.0 3.0 4.0   # comments can also come after commands
 ```
 
 
@@ -129,12 +134,12 @@ If an Orientation is provided, it **MUST** be listed only once and before any Ve
 
 Model Orientation is defined using the `orient` command, followed by a space-separated list of signed axes that correspond to the Right, Up, Forward, and Away directions. Each of the X, Y, Z, and W axes **MUST** be included exactly once.
 
-#### Example
+#### Examples
 ```
 # default orientation
 orient X Y Z W
-
-
+```
+```
 # alternate orientation (-Y right, +W up, X forward, -Z away)
 orient -Y W X -Z
 ```
@@ -158,7 +163,7 @@ A Vertex Normal is denoted using the `vn` keyword, followed by 4 floating point 
 
 Vertex Normals **SHOULD** be normalized.
 
-#### Example
+#### Examples
 ```
 vn 0.5 0.5 0.5 0.5
 
@@ -170,11 +175,11 @@ vn 1.0 1.1 1.2 1.3
 
 Vertex Texture Coordinates are **OPTIONAL**.
 
-A Vertex Texture Coordinate is denoted using the `vt` keyword, followed by 3 floating point numbers, denoting the i, j, k components of the texture coordinate.
+A Vertex Texture Coordinate is denoted using the `vt` keyword, followed by 3 floating point numbers, denoting the u, v, w components of the texture coordinate.
 
 Texture Coordinate values **SHOULD** be in the range [0,1]. Values **MAY** be outside the [0,1] range, but it is up to the application to decide how to handle values outside this range.
 
-#### Example
+#### Examples
 ```
 vt 0.25 0.75 0.1
 
@@ -188,12 +193,15 @@ Color Data is **OPTIONAL**.
 
 Color Data can be assigned to Vertices, Tetrahedra, Polylines, and Cells in the same way that custom Data can be assigned to them.
 
-A Color is denoted using the `co` keyword, followed by 3 unsigned integer numbers. These numbers **MUST** be in the [0,255] range. The 3 values represent the red, green, and blue components of the color.
+A Color is denoted using the `co` keyword, followed by 3 or 4 unsigned integer numbers. These numbers **MUST** be in the [0,255] range. The 4 values represent the red, green, blue, and alpha components of the color. If only 3 values are provided, they are assumed to be the RGB components of the color and the Alpha component **SHOULD** be assumed to be `255`.
 
-#### Example
+#### Examples
 ```
 # RGB color
 co 114 255 66
+
+# RGBA color
+co 126 127 128 255
 ```
 
 ## Tetrahedron
@@ -209,14 +217,14 @@ Before listing any Tetrahedron commands, you must specify the line format (with 
 The command keyword is `tformat`, followed by a forward slash-separated list of vertex data keywords that will be included for each vertex. For example, to attach Vertex Texture Coordinate data to the tetrahedron, first call the following command: `tformat v/vt`. Then, tetrahedra may be listed like this: `t v0/vt0 v1/vt1 v2/vt2 v3/vt3`. Each vertex is a list of the vertex data indices in the order defined by the most recent `tformat` command, separated by `/`.
 The default Tetrahedron Format is one that includes only Vertex Position data. You may list the command `tformat v`, which has the same effect.
 
+A Tetrahedron format **MUST** be defined before any tetrahedra are listed (except when using only Vertex Position). Once a format has been defined, it **MUST NOT** be changed during the remainder of the file (i.e. only one tetrahedron format per 4DO file).
+
 ### Tetrahedron-level Data
 You may also attach data to an entire tetrahedron, as opposed to attaching to the individual vertices. For example, you may want to assign a color to the whole tetrahedron, instead of assigning different colors to each vertex. To do this, call the `tformat` command and list the keyword for the tetrahedron-level data first, followed by a space. For example, to attach color data to a tetrahedron (as well as vertex position and normal data), call `tformat co v/vn`. Then, to list the tetrahedron, call `t co0 v0/vn0 v1/vn1 v2/vn2 v3/vn3`.
 
 ### General Tetrahedron Requirements
 
 Every tetrahedron **MUST** include Vertex Position data.
-
-You **MAY** switch tetrahedron formats within a single object, but if two sequential `t` commands are called with differing formats, and the `tformat` command was not called to define the new format, the file is **INVALID**.
 
 The indices provided by each tetrahedron entry **MUST** be non-negative integers. They also **MUST** correspond to vertex entries that have previously been listed in the file.
 
@@ -226,31 +234,29 @@ You **MAY** define a custom Tetrahedron Format that includes both vertex color d
 
 Each vertex in a single tetrahedron **MUST** have the same format. (E.g. you couldn't do `t 1 2/4 5/6/8 6//6` because each of these four vertices uses a different format)
 
-#### Example
+#### Examples
 ```
 # Tetrahedron with only Vertex Position
 # Note that a tformat command is not required for this simple case
 t 0 1 2 3
-
+```
+```
 # Tetrahedron with Vertex Position (indices 0,1,2,3) and Vertex Normal (indices 4,5,6,7)
 tformat v/vn
 t 0/4 1/5 2/6 3/7
-
+```
+```
 # Tetrahedron with Vertex Position (indices 0,1,2,3), Normal (indices 4,5,6,7), and Texture Coordinates (indices 8,9,10,11)
 tformat v/vn/vt
 t 0/4/8 1/5/9 2/6/10 3/7/11
-
+```
+```
 # Tetrahedron with Vertex Position (indices 0,1,2,3), Texture Coordinates (indices 4,5,6,7), and Color (indices 8,9,10,11)
 tformat v/vt/co
 t 0/4/8 1/5/9 2/6/10 3/7/11
-
-# Two tetrahedra in the same object but with different formats
-tformat v/vn
-t 0/4 1/5 2/6 3/7
-tformat v/vn/vt
-t 4/8/0 5/9/1 6/10/2 7/11/3
-
-# Two tetrahedra in the same object with their vertex position data listed just before the tetrahedron commands
+```
+```
+# Two tetrahedra in the same file with their vertex position data listed just before the tetrahedron commands
 # (the tformat command is not necessary in this case since only vertex position data is provided)
 v 0.0 0.0 0.0 0.0
 v 1.0 0.0 0.0 0.0
@@ -262,10 +268,18 @@ v 4.0 2.0 2.0 2.0
 v 2.0 4.0 2.0 2.0
 v 2.0 2.0 4.0 2.0
 t 4 5 6 7
-
+```
+```
 # A tetrahedron with a single color (at index 9), rather than a color for each vertex
 tformat co v
-t 9 0 1 2 3 
+t 9 0 1 2 3
+```
+```
+# It's possible to define a tetrahedron format with multiple per-tetrahedron data points
+tformat co co v/vn
+
+# a tetrahedron with two colors assigned (indices 5 and 7) as well as vertex position (indices 0,1,2,3) and vertex normal (indices 8,9,10,11)
+t 5 7 0/8 1/9 2/10 3/11
 ```
 
 ### Tetrahedron Vertex Winding Order
@@ -281,8 +295,6 @@ Additional data **MAY** be added to the vertices in the Polyline using Polyline 
 
 There is no limit to the length of a polyline, except those naturally imposed by file size limits, maximum values of counter variables, max memory available, etc.
 
-Polylines **MUST** be defined within the scope of an object, or within the global scope.
-
 Polylines can visit vertices and travel along edges that are not part of any tetrahedron.
 
 ### Polyline Format Customization
@@ -297,11 +309,13 @@ Vertex Data **MAY** be assigned to an entire Polyline, not just the individual v
 ```
 # A polyline that visits the first 8 vertices
 p 0 1 2 3 4 5 6 7
-
+```
+```
 # A polyline with vertex position (indices 2,3,4) and vertex color (indices 6,8,9)
 pformat v/co
 p 2/6 3/8 4/9
-
+```
+```
 # A polyline with polyline-level color data (index 10), vertex position (indices 1,2,3,4), and vertex texture coordinate (indices 2,4,6,8)
 pformat co v/vt
 p 10 1/2 2/4 3/6 4/8
@@ -309,69 +323,26 @@ p 10 1/2 2/4 3/6 4/8
 
 ## Cells
 
+A Cell is a grouping of tetrahedra into a compound polyhedron. The tetrahedra in cells **SHOULD** be contiguous (i.e. every tetrahedron in a Cell **SHOULD** share at least one face with at least one other tetrahedron in the Cell).
+
 Cells are **OPTIONAL**.
 
 A cell is denoted by the `c` keyword, followed by a list of 1 or more tetrahedron indices, separated by spaces.
 
-Like Polylines, there is no artificial limit to the number of tetrahedra assigned to a cell.
-
-The tetrahedra in cells **SHOULD** be contiguous.
-
 The tetrahedron indices **SHOULD NOT** be repeated within a single cell.
 
-### Cell-level Data
+Like Polylines, there is no artificial limit to the number of tetrahedra that can be assigned to a cell.
 
-Vertex Data **MAY** be assigned to an entire Cell, not just the individual vertices in the cell. Before listing a Cell with cell-level data, the Cell command format must be defined. Define cell-level data in the cformat command like this: `cformat co t`. Like with Tetrahedron Format Customization, first list the cell-level data keyword, followed by a space, then provide a slash-separated list of vertex data keywords.
+No additional data may be assigned to a Cell (i.e. there is no `cformat` command).
 
 #### Example
 ```
 # A cell comprised of tetrahedra at indices 0, 2, and 3
 c 0 2 3
-
-# A cell with cell-level color data (index 9), and the tetrahedra at indices 0, 5, and 6
-cformat co t
-c 9 0 5 6
 ```
-
-## Objects
-
-Objects are **OPTIONAL**.
-
-An object is started with the `o` keyword
-Objects **MAY** be named (e.g. `o name_of_object`). To name an object, use the `o` keyword, followed by a space. Anything after the space until the end of the line is considered the object's name. If an object is unnamed, it is up to the application to decide how to differentiate between distinct objects.
-
-When the `o` keyword is used, all subsequent keywords apply to this object until the `o` keyword is used again (i.e. a new object is defined). When the `o` keyword is used again, a new object begins and the vertex indices reset to 0. Objects organize vertices, vertex normals, vertex texture coordinates, vertex colors, lines, tetrahedra, and cells into a separate index space.
-
-All objects within a file **MUST** have unique names (case-insensitive).
-
-Objects **MUST** be contiguous (i.e. you cannot start object1, then define object2, then redefine object1 to add additional data)
-
-#### Examples
 ```
-# Object names can include spaces and numbers: "object 1"
-o object 1
-v 2.0 2.0 3.0 3.0
-v 3.0 3.0 4.0 4.0
-v 4.0 4.0 5.0 5.0
-v 5.0 5.0 6.0 6.0
-t 0 1 2 3
-
-
-# A new object definition resets the vertex data and tetrahedron data indices
-o object_2
-v 7.0 7.0 8.0 8.0
-v 8.0 8.0 9.0 9.0
-v 9.0 9.0 10.0 10.0
-v 10.0 10.0 11.0 11.0
-
-# vertex 0 here refers to the one at (7.0,7.0,8.0,8.0), NOT the one at (2.0,2.0,3.0,3.0)
-t 0 1 2 3
-
-# You cannot restart "object 1" after "object_2" has been declared
-# o object 1  <= INVALID
-
-# You cannot name a new object "Object_2". Object names are case-insensitive
-# o Object_2  <= INVALID
+# Tetrahedra 0 and 1 are not contiguous. This is not invalid but also not advisable
+c 0 1
 ```
 
 # Material Library
@@ -384,25 +355,63 @@ t 0 1 2 3
 [see also [https://github.com/KhronosGroup/glTF?tab=readme-ov-file](https://github.com/KhronosGroup/glTF?tab=readme-ov-file)]
 
 ## Using Materials
-To import a material library, use the `mtllib` keyword, followed by the name of an external .pbr file.
+To import a material library, use the `mtllib` keyword, followed by the name of an external .pbr file. If a filename contains spaces, the filename **MUST** be enclosed in quotes.
 
 The material library command **MUST NOT** contain directory names and/or directory symbols.
 
 Material libraries **SHOULD** be in the same directory as the 4DO file, however, it is up to the application to implement features for finding material library files in other directories.
 
-Materials are assigned to tetrahedra. 
+To assign a material to one or more tetrahedra, use the `usemtl` command, followed by the name of the material you wish to use. Any tetrahedra defined after this command will be assigned this material. Therefore, a file **SHOULD** group Tetrahedron commands by material.
 
-A tetrahedron **MUST** have either one or zero materials assigned to it.
+A Tetrahedron cannot have more than one material assigned to it.
 
-To assign a material to an object or part of an object, use the `usemtl` command. Any tetrahedra that are defined after this command will be assigned the material. An object **MAY** have multiple materials, but an individual tetrahedron **MUST** have only one material.
-
-When a new object is defined, the `usemtl` command is deactivated and must be called again for the new object.
+Materials are assigned only to tetrahedra. Materials are not assigned to Vertices, Polylines, or Cells.
 
 ```
-[TODO: examples]
-Object with one material
-Object with two materials
-New object: no material until usemtl is called again
+# Import two material libraries
+mtllib materials.pbr  # defines materials 'mat1' and 'mat2'
+mtllib "more materials.pbr"   # filenames with spaces must be in quotes
+
+# It's ok to define a Tetrahedron without a material
+t 0 1 2 3
+
+# set the current material for the next two tetrahedra
+usemtl mat1
+t 2 3 4 5
+t 3 4 5 6
+
+# switch to a new material
+usemtl mat2
+t 4 5 6 7
+
+# you can switch back to mat1 but the extra 'usemtl' command inflates the file size
+usemtl mat1
+t 5 6 7 8
 ```
 
+# Glossary of Commands
+`4DO` : [File signature](#file-header) which specifies which specification version to use for parsing.
 
+`c` : [Cell](#cells). Combine multiple tetrahedra into a compound cell.
+
+`co` : [Color](#color-data). Either RGB or RGBA 8-bit uint per component.
+
+`mtllib` : [Load Material Library](#using-materials). Points to an external .pbr file.
+
+`orient` : [Model Orientation](#model-orientation). Defines the Right, Up, Forward, and Away direction vectors.
+
+`p` : [Polyline](#polylines). Defines a list of vertex indices where line segments connect consecutive vertices.
+
+`pformat` : [Polyline Format](#polyline-format-customization). Allows you to customize per-vertex and per-polyline data.
+
+`t` : [Tetrahedron](#tetrahedron). Defines a list of vertex data to assign to each of the four vertices.
+
+`tformat` : [Tetrahedron Format](#tetrahedron-format-customization). Allows you to customize per-vertex and per-tetrahedron data.
+
+`usemtl` : [Set Active Material](#using-materials). Any subsequent Tetrahedron definitions will use the active material.
+
+`v` : [Vertex Position](#vertex-position). Four floating point numbers to define the x, y, z, w coordinates of the position.
+
+`vn` : [Vertex Normal](#vertex-normal). Four floating point numbers to define the x, y, z, w coordinates of the normal vector.
+
+`vt` : [Vertex Texture Coordinate](#vertex-texture-coordinate). Three floating point numbers to define the u, v, w coordinates of the texture map vertex.
