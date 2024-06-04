@@ -128,11 +128,11 @@ v 1.0 2.0 3.0 4.0   # comments can also come after commands
 
 ## Model Orientation
 
-An Orientation is **OPTIONAL**. If one is not provided, the orientation is assumed to be X-right, Y-up, Z-forward, W-over/away.
+An Orientation is **OPTIONAL**. If one is not provided, the orientation is assumed to be X-right, Y-up, Z-forward, W-over.
 
 If an Orientation is provided, it **MUST** be listed only once and before any Vertices are listed.
 
-Model Orientation is defined using the `orient` command, followed by a space-separated list of signed axes that correspond to the Right, Up, Forward, and Away directions. Each of the X, Y, Z, and W axes **MUST** be included exactly once.
+Model Orientation is defined using the `orient` command, followed by a space-separated list of signed axes that correspond to the Right, Up, Forward, and Over directions. Each of the X, Y, Z, and W axes **MUST** be included exactly once.
 
 #### Examples
 ```
@@ -140,7 +140,7 @@ Model Orientation is defined using the `orient` command, followed by a space-sep
 orient X Y Z W
 ```
 ```
-# alternate orientation (-Y right, +W up, X forward, -Z away)
+# alternate orientation (-Y right, +W up, +X forward, -Z over)
 orient -Y W X -Z
 ```
 
@@ -195,13 +195,17 @@ Color Data can be assigned to Vertices, Tetrahedra, Polylines, and Cells in the 
 
 A Color is denoted using the `co` keyword, followed by 3 or 4 unsigned integer numbers. These numbers **MUST** be in the [0,255] range. The 4 values represent the red, green, blue, and alpha components of the color. If only 3 values are provided, they are assumed to be the RGB components of the color and the Alpha component **SHOULD** be assumed to be `255`.
 
+Colors can also be defined as 3-byte (RGB) or 4-byte (RGBA) hexadecimal numbers, like this: `co 0xRRGGBBAA`.
+
 #### Examples
 ```
 # RGB color
 co 114 255 66
+co 0x72FF42   # the same color in hex
 
 # RGBA color
 co 126 127 128 255
+co 0x7e7F80FF   # the same color in hex
 ```
 
 ## Tetrahedron
@@ -276,9 +280,9 @@ t 9 0 1 2 3
 ```
 ```
 # It's possible to define a tetrahedron format with multiple per-tetrahedron data points
-tformat co co v/vn
+tformat co vt v/vn
 
-# a tetrahedron with two colors assigned (indices 5 and 7) as well as vertex position (indices 0,1,2,3) and vertex normal (indices 8,9,10,11)
+# a tetrahedron with one color and one texture coordinate assigned (indices 5 and 7, respectively) as well as vertex position (indices 0,1,2,3) and vertex normal (indices 8,9,10,11)
 t 5 7 0/8 1/9 2/10 3/11
 ```
 
@@ -398,7 +402,7 @@ t 5 6 7 8
 
 `mtllib` : [Load Material Library](#using-materials). Points to an external .pbr file.
 
-`orient` : [Model Orientation](#model-orientation). Defines the Right, Up, Forward, and Away direction vectors.
+`orient` : [Model Orientation](#model-orientation). Defines the Right, Up, Forward, and Over direction vectors.
 
 `p` : [Polyline](#polylines). Defines a list of vertex indices where line segments connect consecutive vertices.
 
