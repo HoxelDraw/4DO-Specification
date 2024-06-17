@@ -350,13 +350,95 @@ c 0 1
 ```
 
 # Material Library
+
+4DO uses a Physically-Based Rendering (PBR) material model, specifically the "Metallic-Roughness Model." It is identical to the PBR material model used by the glTF 2.0 file format (see [https://github.com/KhronosGroup/glTF?tab=readme-ov-file](https://github.com/KhronosGroup/glTF?tab=readme-ov-file)). (also see [https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness/](https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness/))
+
+Materials are defined in terms of the following values and/or texture maps: Base Color, Metallic Factor, Roughness Factor, Surcell Normal, Occlusion, and Emission.
+
 ## Material Library File Format
 
-[BIG TODO]
+Material library files follow the same structure paradigm as 4DO files. Files are a list of commands, each of which is made up of a keyword followed by relevant data. File paths must be surrounded by quotes if the path contains spaces. Comments are allowed.
 
-[TODO: similar to how OBJ reads materials, but all the material model will probably be based on the glTF PBR model]
-[see [https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness](https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness)]
-[see also [https://github.com/KhronosGroup/glTF?tab=readme-ov-file](https://github.com/KhronosGroup/glTF?tab=readme-ov-file)]
+### Defining a Material
+
+To define a new material, use the `newmtl` command followed by a space and the material's name. The material's name **MUST NOT** contain spaces. Once the material name is defined, list all desired material properties.
+
+Each material property may be listed zero or one time. If a property is listed twice for the same material, the most recent one **SHOULD** be used.
+
+#### Base Color
+
+Base Color is **OPTIONAL**. The base color may be defined as either a value (a list of four floating-point numbers in the [0,1] range representing the RGBA components) or defined as a texture (a relative path to an image file containing the texture data). The commands are `baseColorFactor` and `baseColorTexture`, respectively. If both a factor and a texture are provided, the factor acts as a component-wise scaling factor for the texture. If only a factor is provided, the factor is treated as the base color.
+
+#### Example
+```
+baseColorTexture "cool3DTexture.png"
+
+# an orange-ish multiplier for the base color
+baseColorFactor 1.0 0.75 0.1 1.0
+```
+
+#### Metallic Roughness Texture
+
+The Metallic-Roughness texture is **OPTIONAL**. This texture contains the data for **both** metal-ness **and** roughness. The metal-ness value is stored in the blue color channel of the texture and the roughness value is stored in the green color channel of the texture. It is defined using the `metallicRoughnessTexture` command.
+
+#### Example
+```
+# the texture containing both the metalness and roughness
+metallicRoughnessTexture "metalRoughTex.png"
+```
+
+#### Metallic Factor
+
+Metallic is **OPTIONAL** and defines the metal-ness of the material. Use the `metallicFactor` command to define the metal-ness of the material, listed as a single floating-point number in the [0,1] range. If both a factor and a Metallic-Roughness texture are provided, the factor acts as a scaling factor for the metallic component of the texture. If only a factor is provided, the factor is treated as the metal-ness of the whole material.
+
+#### Example
+```
+metallicFactor 1.0  # this material is 100% metal-y
+```
+
+#### Roughness Factor
+Roughness is **OPTIONAL** and defines the roughness of the material. Use the `roughnessFactor` command to define the roughness of the material, listed as a single floating-point number in the [0,1] range. If both a factor and a Metallic-Roughness texture are provided, the factor acts as a scaling factor for the roughness component of the texture. If only a factor is provided, the factor is treated as the roughness of the whole material.
+
+#### Example
+```
+roughnessFactor 1.0  # this material is 25% rough
+```
+
+#### Normal Texture
+The Normal Texture is **OPTIONAL** and uses the `normalTexture` keyword. The command references an image texture file with the 4D surcell normals encoded in the RGBA components of the image. The command also requires a scaling factor, a single floating-point number.
+
+#### Example
+```
+# load a normal texture and don't change the scaling
+normalTexture "interestingNormals.png" 1.0
+
+# you can provide any scaling factor, even negative ones
+normalTexture "backwardsNormals.png" -0.25
+```
+
+#### Occlusion Texture
+The Occlusion Texture is **OPTIONAL** and uses the `occlusionTexture` keyword. The command references an image texture file which encodes occlusion values in the red component of the image. The command also requires a strength factor, a single floating-point number in the [0,1] range.
+
+#### Example
+```
+occlusionTexture "kindaLikeAO.png" 0.9
+```
+
+#### Emissive Texture
+The Emissive Texture is **OPTIONAL** and uses the `emissiveTexture` keyword. The command references an image texture file which encodes emissive values in the RGB components of the image.
+
+#### Example
+```
+emissiveTexture "prettyLights.png"
+```
+
+#### Emissive Factor
+The Emissive Factor is **OPTIONAL** and uses the `emissiveFactor` keyword, followed by three floating-point values in the [0,1] range representing the RGB components of emission. If both a factor and a texture are provided, the factor acts as a component-wise scaling factor for the texture. If only a factor is provided, the factor is treated as the emissive color.
+
+#### Example
+```
+emissiveFactor 0.4 0.6 0.8
+```
 
 ## Using Materials
 To import a material library, use the `mtllib` keyword, followed by the name of an external .pbr file. If a filename contains spaces, the filename **MUST** be enclosed in quotes.
