@@ -1,8 +1,7 @@
 # 4DO-Specification
 The official specification for the 4DO Geometry File Format
 
-# 4D OBJ File Format Specification
-### Specification Version 1
+# 4D OBJ File Format Specification - Version 1
 April 7, 2024
 
 ## Background
@@ -58,7 +57,7 @@ The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file forma
 ## File Structure
 
 ### File Header
-A 4DO file **SHOULD** begin with "4DO" followed by a space and then the file specification version, which is currently "1", like this: `4DO 1`.
+A 4DO file **MUST** begin with "4DO" followed by a space and then the file specification version, which is currently "1", like this: `4DO 1`. The `4DO` command **MUST** be provided before any other commands.
 
 If an Orientation is provided, it **SHOULD** be provided in the header lines and it **MUST** be provided before any Vertex data is listed.
 
@@ -130,9 +129,11 @@ v 1.0 2.0 3.0 4.0   # comments can also come after commands
 
 An Orientation is **OPTIONAL**. If one is not provided, the orientation is assumed to be X-right, Y-up, Z-forward, W-over.
 
-If an Orientation is provided, it **MUST** be listed only once and before any Vertices are listed.
+If an Orientation is provided, it **MUST** be listed only once and before any Vertex Positions are listed.
 
 Model Orientation is defined using the `orient` command, followed by a space-separated list of signed axes that correspond to the Right, Up, Forward, and Over directions. Each of the X, Y, Z, and W axes **MUST** be included exactly once.
+
+The Orientation should be used to orient only Vertex Position and Vertex Normal, but should not affect Vertex Texture Coordinate.
 
 #### Examples
 ```
@@ -363,7 +364,7 @@ Material library files follow the same structure paradigm as 4DO files. Files ar
 
 To define a new material, use the `newmtl` command followed by a space and the material's name. The material's name **MUST NOT** contain spaces. Once the material name is defined, list all desired material properties.
 
-Each material property may be listed zero or one time. If a property is listed twice for the same material, the most recent one **SHOULD** be used.
+Each material property may be listed zero or one time(s). If a property is listed more than once for the same material, the most recent one **MUST** be used.
 
 #### Base Color
 
@@ -371,7 +372,7 @@ Base Color is **OPTIONAL**. The base color may be defined as either a value (a l
 
 #### Example
 ```
-baseColorTexture "cool3DTexture.png"
+baseColorTexture "cool3DTexture.jpg"
 
 # an orange-ish multiplier for the base color
 baseColorFactor 1.0 0.75 0.1 1.0
@@ -401,7 +402,7 @@ Roughness is **OPTIONAL** and defines the roughness of the material. Use the `ro
 
 #### Example
 ```
-roughnessFactor 1.0  # this material is 25% rough
+roughnessFactor 0.25  # this material is 25% rough
 ```
 
 #### Normal Texture
@@ -410,7 +411,7 @@ The Normal Texture is **OPTIONAL** and uses the `normalTexture` keyword. The com
 #### Example
 ```
 # load a normal texture and don't change the scaling
-normalTexture "interestingNormals.png" 1.0
+normalTexture "interestingNormals.bmp" 1.0
 
 # you can provide any scaling factor, even negative ones
 normalTexture "backwardsNormals.png" -0.25
@@ -476,6 +477,7 @@ t 5 6 7 8
 ```
 
 # Glossary of Commands
+## 4DO Commands
 `4DO` : [File signature](#file-header) which specifies which specification version to use for parsing.
 
 `c` : [Cell](#cells). Combine multiple tetrahedra into a compound cell.
@@ -501,3 +503,23 @@ t 5 6 7 8
 `vn` : [Vertex Normal](#vertex-normal). Four floating point numbers to define the x, y, z, w coordinates of the normal vector.
 
 `vt` : [Vertex Texture Coordinate](#vertex-texture-coordinate). Three floating point numbers to define the u, v, w coordinates of the texture map vertex.
+
+## Material Commands
+
+`baseColorFactor` : The [Base Color](#base-color) (i.e. Albedo or Diffuse color) of the material. Encoded as four floating point numbers. If a `baseColorTexture` is present, the `baseColorFactor` is a component-wise scaling factor for the texture.
+
+`baseColorTexture` : The [Base Color](#base-color) of the material, encoded in a 3D texture.
+
+`emissiveFactor` : The [Emissive Color](#emissive-factor) of the material. Encoded as four floating point numbers. If an `emissiveTexture` is present, the `emissiveFactor` is a component-wise scaling factor for the texture.
+
+`emissiveTexture` : The [Emissive Color](#emissive-texture) of the material, encoded in a 3D texture.
+
+`metallicFactor` : The [Metallic Factor](#metallic-factor) of the material, encoded as a single floating point number. If a `metallicRoughnessTexture` is present, the `metallicFactor` is a scaling factor for the metal-ness component of the texture. Otherwise, this factor is used for the whole material.
+
+`metallicRoughnessTexture` : The [Metallic Roughness Texture](#metallic-roughness-texture), encoded in the Blue (metal-ness) and Green (roughness) channels of the 3D texture.
+
+`normalTexture` : The [Normal Map](#normal-texture) of the material. The RGBA channels of the texture represent the x, y, z, and w components of the surcell normal. Also accepts a scaling factor.
+
+`occlusionTexture` : The [Occlusion Map](#occlusion-texture) of the material. The Red channel of the 3D texture represents the ambient occlusion of the material. Also accepts a strength factor.
+
+`roughnessFactor` : The [Roughness Factor](#roughness-factor) of the material, encoded as a single floating point number. If a `metallicRoughnessTexture` is present, the `roughnessFactor` is a scaling factor for the roughness component of the texture. Otherwise, this factor is used for the whole material.
