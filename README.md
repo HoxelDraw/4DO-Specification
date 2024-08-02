@@ -288,7 +288,8 @@ t 5 7 0/8 1/9 2/10 3/11
 ```
 
 ### Tetrahedron Vertex Winding Order
-[TODO: this is just a convention and is not enforced by the format, but deserves an explanation here]
+The winding order of the vertices in a Tetrahedron helps to determine the direction of the surcell normal. While this order is not enforced by this specification, the following convention is recommended. With vertex 0 at the apex of the tetrahedron, the three vertices of the base of the tetrahedron should be listed in CCW order, when facing the front of the base. The vertex order is illustrated here:
+![Tetrahedron vertex winding order](4DO_spec_diagrams/tet_winding_order.png)
 
 ## Polylines
 
